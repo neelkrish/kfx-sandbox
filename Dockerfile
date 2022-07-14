@@ -1,0 +1,48 @@
+# This image containts all tools required for building K/FX:
+# Xen, LibVMI, capstone, libxdc, dwarf2json, AFL
+FROM debian:buster
+
+# DRAKVUF build deps
+RUN echo "deb-src http://deb.debian.org/debian buster main" >> /etc/apt/sources.list
+
+## Set proxy so that git clone will work 
+USER $USERNAME
+##WORKDIR /home/"$USERNAME"
+ENV http_proxy=http://proxy-chain.intel.com:911
+ENV https_proxy=http://proxy-chain.intel.com:911
+ENV no_proxy=*.intel.com,localhost
+
+ENV HTTP_PROXY=http://proxy-chain.intel.com:911
+ENV HTTPS_PROXY=http://proxy-chain.intel.com:911
+ENV NO_PROXY=localhost,127.0.0.1,docker-registry.intel.com
+## Install some packages we need for compiling xen and kfx 
+##cite: https://wiki.xenproject.org/wiki/Compiling_Xen_From_Source#Build_Dependencies
+##cite: https://github.com/intel/kernel-fuzzer-for-xen-project#1-install-dependencies-
+RUN apt-get update && apt-get install -y apt-utils curl sudo zip gzip tar \
+                         transfig tgif libxc-dev  texlive-latex-base texlive-latex-recommended \
+                         texlive-fonts-extra texlive-fonts-recommended mercurial \
+                         make zlib1g-dev python python-dev libncurses5-dev patch libsdl-dev \
+                         iasl libbz2-dev e2fslibs-dev uuid-dev ocaml ocaml-findlib xz-utils libyajl-dev \
+                         markdown pandoc  ccache git-core  libcurl4   python3-dev texinfo  wget   autoconf libtool \        
+ 	          	 build-essential libsdl1.2-dev  xtightvncviewer tightvncserver x11vnc uuid-runtime  bridge-utils \
+ 	          	 liblzma-dev  git bcc bin86 gawk iproute2 libcurl4-openssl-dev bzip2 libpci-dev \
+ 	          	 libc6-dev libc6-dev-i386 linux-libc-dev libvncserver-dev libssl-dev \
+ 	          	 libx11-dev bison flex  gettext  libpixman-1-dev libaio-dev libfdt-dev cabextract \
+ 	          	 libglib2.0-dev  automake libjson-c-dev libfuse-dev autoconf-archive kpartx python3-pip \
+ 	          	 libsystemd-dev cmake snap gcc-multilib nasm binutils bc libunwind-dev ninja-build checkpolicy clang gcc-7 g++-7 lsb-release 
+			
+
+RUN apt-get update && apt-get install -y build-essential git wget curl cmake flex bison libjson-c-dev autoconf-archive clang python3-dev gcc-7 g++-7 lsb-release patch libsystemd-dev nasm bc
+
+# Install Golang
+RUN wget -q -O /usr/local/go1.15.3.linux-amd64.tar.gz https://golang.org/dl/go1.15.3.linux-amd64.tar.gz
+RUN tar -C /usr/local -xzf /usr/local/go1.15.3.linux-amd64.tar.gz
+
+# Xen deps
+RUN apt-get -y build-dep xen
+
+RUN ln -sf /usr/bin/gcc-7 /usr/bin/gcc && \
+    ln -sf /usr/bin/g++-7 /usr/bin/g++
+
+COPY ./*.sh /scripts/
+ENTRYPOINT ["/scripts/custom_bundle.sh"]
