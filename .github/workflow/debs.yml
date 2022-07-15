@@ -1,0 +1,92 @@
+name: Package build
+
+on:
+  push:
+    tags:
+      - 'v0.*'
+      - 'dev-build-*'
+      - 'dev-build_*'
+
+jobs:
+  release:
+    runs-on: ubuntu-18.04
+    steps:
+    - name: Create a Release
+      uses: actions/create-release@v1
+      id: create_release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: KFX Sandbox ${{ github.ref }}
+        draft: true
+        prerelease: false
+    - name: Store release URL as file
+      run: |
+        echo "${{ steps.create_release.outputs.upload_url }}" > release-url.txt
+    - name: Upload release URL artifact
+      uses: actions/upload-artifact@v1
+      with:
+        name: release-url
+        path: release-url.txt
+  build:
+    needs: [release]
+    runs-on: ubuntu-18.04
+    strategy:
+      fail-fast: false
+      matrix:
+        container:
+          - "debian:buster"
+          - "debian:bullseye"
+          - "ubuntu:bionic"
+          - "ubuntu:focal"
+    steps:
+    - name: Fetch release URL
+      uses: actions/download-artifact@v1
+      with:
+        name: release-url
+    - name: Generate variables
+      id: gen_vars
+      run: |
+        SYSTEM_ID=$(echo ${{ matrix.container }} | cut -f1 '-d:')
+        DISTRIBUTION=$(echo ${{ matrix.container }} | cut -f2 '-d:')
+        ARTIFACT_PREFIX="${SYSTEM_ID}_${DISTRIBUTION}"
+        echo "Artifact prefix: $ARTIFACT_PREFIX"
+        RELEASE_URL=$(cat release-url/release-url.txt)
+        echo "Release URL: $RELEASE_URL"
+        echo "::set-output name=artifact_prefix::${ARTIFACT_PREFIX}"
+        echo "::set-output name=release_url::${RELEASE_URL}"
+    - name: Checkout KFX Sandbox
+      uses: actions/checkout@v2
+      with:
+        path: sandbox
+        submodules: false
+    - name: Get kfx commit ref
+      id: get_kfx_ref
+      run: |
+        kfx_REF=$(sh -c 'cd sandbox && git ls-tree HEAD kfx' | cut -f3 '-d ' | cut -f1 -d$'\t')
+        echo "::set-output name=kfx_ref::${kfx_REF}"
+    - name: Checkout kfx
+      uses: actions/checkout@v2
+      with:
+        repository: tklengyel/kfx
+        path: kfx
+        ref: ${{ steps.get_kfx_ref.outputs.kfx_ref }}
+        submodules: recursive
+    - name: Build kfx package
+      id: build_kfx_deb
+      run: |
+        sh -c 'cd kfx && sh package/build.sh ${{ matrix.container }}'
+        kfx_DEB_PATH=$(find kfx/package/out/*.deb | head -n1)
+        kfx_DEB_NAME=$(basename "$kfx_DEB_PATH")
+        echo "::set-output name=kfx_deb_path::${kfx_DEB_PATH}"
+        echo "::set-output name=kfx_deb_name::${{ steps.gen_vars.outputs.artifact_prefix }}_${kfx_DEB_NAME}"
+    - name: Upload kfx release asset
+      uses: actions/upload-release-asset@v1.0.2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.gen_vars.outputs.release_url }}
+        asset_path: ${{ steps.build_kfx_deb.outputs.kfx_deb_path }}
+        asset_name: ${{ steps.build_kfx_deb.outputs.kfx_deb_name }}
+        asset_content_type: application/vnd.debian.binary-package
