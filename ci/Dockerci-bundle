@@ -2,21 +2,21 @@
 # Xen, LibVMI, capstone, libxdc, dwarf2json, AFL
 FROM debian:buster
 
-# DRAKVUF build deps
+# KFX build deps
 RUN echo "deb-src http://deb.debian.org/debian buster main" >> /etc/apt/sources.list
 # Add our special apt.conf with proxy information
-ADD apt.conf /etc/apt/
+##ADD apt.conf /etc/apt/
 
 ## Set proxy so that git clone will work 
-USER $USERNAME
+##USER $USERNAME
 ##WORKDIR /home/"$USERNAME"
-ENV http_proxy=http://proxy-chain.intel.com:911
-ENV https_proxy=http://proxy-chain.intel.com:911
-ENV no_proxy=*.intel.com,localhost
+##ENV http_proxy=http://proxy-chain.intel.com:911
+##ENV https_proxy=http://proxy-chain.intel.com:911
+##ENV no_proxy=*.intel.com,localhost
 
-ENV HTTP_PROXY=http://proxy-chain.intel.com:911
-ENV HTTPS_PROXY=http://proxy-chain.intel.com:911
-ENV NO_PROXY=localhost,127.0.0.1,docker-registry.intel.com
+##ENV HTTP_PROXY=http://proxy-chain.intel.com:911
+##ENV HTTPS_PROXY=http://proxy-chain.intel.com:911
+##ENV NO_PROXY=localhost,127.0.0.1,docker-registry.intel.com
 ## Install some packages we need for compiling xen and kfx 
 ##cite: https://wiki.xenproject.org/wiki/Compiling_Xen_From_Source#Build_Dependencies
 ##cite: https://github.com/intel/kernel-fuzzer-for-xen-project#1-install-dependencies-
