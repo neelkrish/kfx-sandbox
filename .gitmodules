@@ -1,0 +1,3 @@
+[submodule "kernel-fuzzer-for-xen-project"]
+	path = kernel-fuzzer-for-xen-project
+	url = https://github.com/neelkrish/kernel-fuzzer-for-xen-project.git
