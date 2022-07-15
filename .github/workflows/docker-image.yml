@@ -7,8 +7,9 @@ on:
     branches: [ "main" ]
 
 jobs:
+  release:
     runs-on: ubuntu-18.04
- steps:
+    steps:
     - name: Create a Release
       uses: actions/create-release@v1
       id: create_release
