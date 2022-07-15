@@ -1,3 +1,0 @@
-[submodule "kfx"]
-	path = kfx
-	url = https://github.com/neelkrish/kernel-fuzzer-for-xen-project.git
