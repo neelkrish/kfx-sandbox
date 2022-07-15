@@ -9,7 +9,7 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - name: Create a Release
       uses: actions/create-release@v1
@@ -64,8 +64,8 @@ jobs:
     - name: Get kfx commit ref
       id: get_kfx_ref
       run: |
-        kfx_REF=$(sh -c 'cd sandbox && git ls-tree HEAD kfx' | cut -f3 '-d ' | cut -f1 -d$'\t')
-        echo "::set-output name=kfx_ref::${kfx_REF}"
+        KFX_REF=$(sh -c 'cd sandbox && git ls-tree HEAD kernel-fuzzer-for-xen-project' | cut -f3 '-d ' | cut -f1 -d$'\t')
+        echo "::set-output name=kfx_ref::${KFX_REF}"
     - name: Checkout kfx
       uses: actions/checkout@v2
       with:
