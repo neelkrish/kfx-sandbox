@@ -1,0 +1,83 @@
+kind: pipeline
+type: docker
+name: build-docs
+
+steps:
+- name: build-docs
+  image: python:3.8-buster
+  commands:
+    - cd docs
+    - pip install -r requirements.txt
+    - make html
+node:
+   purpose: generic
+trigger:
+  branch:
+  - master
+---
+kind: pipeline
+type: docker
+name: build-drakvuf-bundle
+
+steps:
+- name: package drakvuf-bundle
+  image: debian:buster
+  commands:
+    # Install dependencies
+    - export DEBIAN_FRONTEND=noninteractive
+    - apt-get update && apt-get install -y -q git wget
+    # Configure Minio
+    - wget -q -O /usr/local/bin/mc $MINIO_SERVER/static/mc
+    - chmod +x /usr/local/bin/mc
+    - mc config host add cache $MINIO_SERVER "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
+    # Checkout submodules
+    - git submodule update --init --recursive
+    - export DRAKVUF_COMMIT=$(git ls-tree HEAD drakvuf | awk '{ print $3 }')
+    # Build drakvuf-bundle
+    - sh drakvuf/package/depends.sh
+    - bash ci/build_bundle.sh
+  environment:
+    MINIO_ACCESS_KEY:
+      from_secret: MINIO_ACCESS_KEY
+    MINIO_SECRET_KEY:
+      from_secret: MINIO_SECRET_KEY
+    MINIO_SERVER: https://minio.drakvuf.cert.pl
+node:
+   purpose: generic
+trigger:
+  branch:
+  - master
+---
+kind: pipeline
+type: docker
+name: test-e2e
+
+steps:
+- name: test-e2e
+  image: python:3.8-buster
+  commands:
+    - apt-get update && apt-get install -y git
+    - mkdir -p ~/.ssh/
+    - cd test
+    - pip install -r requirements.txt
+    - pytest --capture=no
+  environment:
+    VM_RUNNER_HOST: "192.168.100.1:8000"
+    MINIO_HOST: "192.168.100.2:8181"
+    MINIO_ACCESS_KEY:
+      from_secret: MINIO_ACCESS_KEY
+    MINIO_SECRET_KEY:
+      from_secret: MINIO_SECRET_KEY
+    RUNNER_KEY:
+      from_secret: RUNNER_KEY
+    BASE_IMAGE: "debian-10-generic-amd64"
+    SNAPSHOT_VERSION: "win7-20210922"
+node:
+   purpose: e2e
+depends_on:
+  - build-drakcore
+  - build-drakrun
+  - build-drakvuf-bundle
+trigger:
+  branch:
+  - master
